@@ -8,6 +8,7 @@
 import tkinter as tk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from idlelib.tooltip import Hovertip
 
 
 GAME_WIDTH = 1020
@@ -90,23 +91,24 @@ class Radar:
         self.y = y
         self.size = size
         self.size_off = size/2
-        self.draw()
+        self.portrait = self.draw()
         
     def draw(self):
-        game_canvas.create_oval(self.x - self.size_off, self.y - self.size_off, self.x + self.size_off, self.y + self.size_off, fill="lightblue")
-    pass
+        return game_canvas.create_oval(self.x - self.size_off, self.y - self.size_off, self.x + self.size_off, self.y + self.size_off, fill="lightblue", tags="radar")
     
-            
+    def undraw(self):
+        game_canvas.delete(self.portrait)
+         
             
 def tick_data(plane):
     if(track_plane == 1):
         plane_data.append((plane.x, -plane.y))
-    return window.after(30, tick_data, plane)
+    window.after(30, tick_data, plane)
         
 
 def control(plane):
     plane.move()
-    return window.after(10, control, plane)
+    window.after(10, control, plane)
 
 def set_keys(event):
     currently_pressed.add(event.keysym)
@@ -173,8 +175,11 @@ def reset():
     label.config(text="Idle")
     
 def delete():
+    global radars
     reset()
     ax.clear()
+    game_canvas.delete("radar")
+    radars = []
     ax.set_xlim(0,game_canvas.winfo_width())
     ax.set_ylim(-game_canvas.winfo_height(), 0)
     figure_canvas.draw()
@@ -182,23 +187,39 @@ def delete():
 def network_toggle():
     if button3.config('relief')[-1] == 'sunken':
         button3.config(relief="raised")
+        #Debug
         print(list(map(lambda x: (x.x, x.y), radars)))
     else:
         button3.config(relief="sunken")
 
 def is_in_valid_boundaries(x, y):
     global game_canvas
-    x_valid = game_canvas.winfo_rootx() <= x <= game_canvas.winfo_rootx()+game_canvas.winfo_width()
-    y_valid = game_canvas.winfo_rooty() <= y <= game_canvas.winfo_rooty()+game_canvas.winfo_height()
+    x_valid = is_in_between(game_canvas.winfo_rootx(), x, game_canvas.winfo_rootx()+game_canvas.winfo_width())
+    y_valid = is_in_between(game_canvas.winfo_rooty(), y, game_canvas.winfo_rooty()+game_canvas.winfo_height())
     return x_valid and y_valid
 
+def on_radar(radarlist : list[Radar], x, y):
+    for r in radarlist:
+        if is_in_between(r.x - 30, x, r.x + r.size + 30) and is_in_between(r.y - 30, y, r.y + r.size + 30):
+            return r
+    return False
+
+def is_in_between(a,b,c):
+    return a <= b <= c
+    
+
 def mouse_press(event: tk.Event):
-    if button3.config('relief')[-1] == 'sunken' and is_in_valid_boundaries(event.x_root, event.y_root):
-        global radars
-        radar = Radar(event.x, event.y)
-        radars.append(radar)
-        
-        
+    global radars
+    if is_in_valid_boundaries(event.x_root, event.y_root):
+        if button3.config('relief')[-1] == 'sunken':
+            if not on_radar(radars, event.x, event.y):
+                radar = Radar(event.x, event.y)
+                radars.append(radar)
+        else:
+            r = on_radar(radars, event.x, event.y)
+            if r:
+                radars.remove(r)
+                r.undraw()
         
 
 # Tasten drücken
@@ -242,15 +263,18 @@ game_canvas.pack(side="left", padx=OFFSET_PLAY_X, pady=OFFSET_PLAY_Y, fill="both
 
 buttons_frame = tk.Frame(game_frame, bg="#e6e6e6")
 buttons_frame.pack(side="left", pady=OFFSET_PLAY_Y, fill="y", expand=0)
-reset_icon = tk.PhotoImage(file = "faafo\\my_files\\reset.png")
-button1 = tk.Button(buttons_frame, bg="#d1e6ed", command=reset, image=reset_icon, name="tEST")
+reset_icon = tk.PhotoImage(file = "pyPlaneDataGenerator\\icons\\reset.png")
+button1 = tk.Button(buttons_frame, bg="#d1e6ed", command=reset, image=reset_icon)
 button1.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
-trash_icon = tk.PhotoImage(file = "faafo\\my_files\\trash.png")
+button1_tip = Hovertip(button1, "Reset", hover_delay=600)
+trash_icon = tk.PhotoImage(file = "pyPlaneDataGenerator\\icons\\trash.png")
 button2 = tk.Button(buttons_frame, bg="#d1e6ed", command=delete, image=trash_icon)
 button2.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
-radar_icon = tk.PhotoImage(file = "faafo\\my_files\\radar.png")
+button2_tip = Hovertip(button2, "Delete", hover_delay=600)
+radar_icon = tk.PhotoImage(file = "pyPlaneDataGenerator\\icons\\radar.png")
 button3 = tk.Button(buttons_frame, bg="#d1e6ed", command=network_toggle, image=radar_icon)
 button3.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
+button3_tip = Hovertip(button3, "Radar", hover_delay=600)
 
 fig, ax = plt.subplots()
 figure_canvas = FigureCanvasTkAgg(fig, game_frame)
