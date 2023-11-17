@@ -1,3 +1,8 @@
+"""
+ @author jabo
+ @create date 17.11.2023
+ @desc Tool for Möller
+"""
 # TODO: Schieberegler für max_acceleration friction und acceleration
 
 import tkinter as tk
