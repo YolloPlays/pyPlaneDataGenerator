@@ -24,7 +24,7 @@ radars = []
 red_dot_on = False
 
 class Plane:
-    def __init__(self, gamecvs: tk.Canvas, x=100, y=100, acceleration=0.4, start_velocity_x=0, start_velovity_y=0, friction=0.99, max_acceleration=6, circle_size=30) -> None:
+    def __init__(self, gamecvs: tk.Canvas, x=100, y=100, acceleration=0.8, start_velocity_x=0, start_velovity_y=0, friction=0.99, max_acceleration=12, circle_size=30) -> None:
         self.x = x
         self.y = y
         self.acceleration = acceleration
@@ -102,13 +102,18 @@ class Radar:
             
 def tick_data(plane):
     if(track_plane == 1):
+        # ax.clear()
+        # ax.set_xlim(0,game_canvas.winfo_width())
+        # ax.set_ylim(-game_canvas.winfo_height(), 0)
         plane_data.append((plane.x, -plane.y))
-    window.after(30, tick_data, plane)
+        # ax.scatter(*zip(*plane_data))
+        # figure_canvas.draw()
+    window.after(100, tick_data, plane)
         
 
 def control(plane):
     plane.move()
-    window.after(10, control, plane)
+    window.after(17, control, plane)
 
 def set_keys(event):
     currently_pressed.add(event.keysym)
