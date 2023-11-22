@@ -103,12 +103,10 @@ class Radar:
             
 def tick_data(plane):
     if(track_plane == 1):
-        ax.clear()
-        ax.set_xlim(0,game_canvas.winfo_width())
-        ax.set_ylim(-game_canvas.winfo_height(), 0)
+        # clear_ax()
         plane_data.append((plane.x, -plane.y))
-        ax.scatter(*zip(*plane_data))
-        figure_canvas.draw()
+        # ax.scatter(*zip(*plane_data))
+        # figure_canvas.draw()
     window.after(30, tick_data, plane)
         
 
@@ -123,15 +121,20 @@ def _quit():
     window.quit()  # stops mainloop
     window.destroy()  # this is necessary on Windows to prevent
     # Fatal Python Error: PyEval_RestoreThread: NULL tstate
+    
+def clear_ax():
+    ax.clear()
+    ax.set_xlim(0,game_canvas.winfo_width())
+    ax.set_ylim(-game_canvas.winfo_height(), 0)
 
 def toggle_track_plane():
     global track_plane
     track_plane = track_plane + 1
     if(track_plane == 2):
-        ax.clear()
-        ax.set_xlim(0,game_canvas.winfo_width())
-        ax.set_ylim(-game_canvas.winfo_height(), 0)
-        ax.scatter(*zip(*plane_data))
+        clear_ax()
+        ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+        radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+        ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
         figure_canvas.draw()
         track_plane = 3
     elif track_plane == 3:
@@ -181,9 +184,9 @@ def reset():
     
     track_plane = 0
     plane_data = []
-    ax.clear()
-    ax.set_xlim(0,game_canvas.winfo_width())
-    ax.set_ylim(-game_canvas.winfo_height(), 0)
+    clear_ax()
+    radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+    ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
     figure_canvas.draw()
     red_dot_on = False
     label.config(text="Idle")
@@ -191,26 +194,18 @@ def reset():
 def delete():
     global radars
     reset()
-    ax.clear()
+    clear_ax()
     game_canvas.delete("radar")
     radars = []
-    ax.set_xlim(0,game_canvas.winfo_width())
-    ax.set_ylim(-game_canvas.winfo_height(), 0)
     figure_canvas.draw()
     
 def network_toggle():
     if button3.config('relief')[-1] == 'sunken':
         button3.config(relief="raised")
         #Debug
-        print(list(map(lambda x: (x.x, x.y), radars)))
+        # print(list(map(lambda x: (x.x, x.y), radars)))
     else:
         button3.config(relief="sunken")
-
-def is_in_valid_boundaries(x, y):
-    global game_canvas
-    x_valid = is_in_between(game_canvas.winfo_rootx(), x, game_canvas.winfo_rootx()+game_canvas.winfo_width())
-    y_valid = is_in_between(game_canvas.winfo_rooty(), y, game_canvas.winfo_rooty()+game_canvas.winfo_height())
-    return x_valid and y_valid
 
 def on_radar(radarlist : list[Radar], x, y):
     for r in radarlist:
@@ -224,16 +219,26 @@ def is_in_between(a,b,c):
 
 def mouse_press(event: tk.Event):
     global radars
-    if is_in_valid_boundaries(event.x_root, event.y_root):
+    if event.widget == game_canvas:
         if button3.config('relief')[-1] == 'sunken':
             if not on_radar(radars, event.x, event.y):
                 radar = Radar(event.x, event.y)
                 radars.append(radar)
+                clear_ax()
+                radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+                ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+                ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+                figure_canvas.draw()
         else:
-            r = on_radar(radars, event.x, event.y)
-            if r:
+            if r:= on_radar(radars, event.x, event.y):
                 radars.remove(r)
                 r.undraw()
+                clear_ax()
+                radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+                ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+                ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+                figure_canvas.draw()
+                
         
 
 # Tasten drücken
@@ -270,13 +275,13 @@ canvas_dot = tk.Canvas(title_frame, bg="#c8ebf7", highlightthickness=0, relief='
 canvas_dot.pack(side="left")
 
 game_frame = title_frame = tk.Frame(window)
-game_frame.pack(fill="both")
+game_frame.pack(fill="both", expand=1)
 
 game_canvas = tk.Canvas(game_frame, bg="lightgray")
 game_canvas.pack(side="left", padx=OFFSET_PLAY_X, pady=OFFSET_PLAY_Y, fill="both", expand=1)
 
 buttons_frame = tk.Frame(game_frame, bg="#e6e6e6")
-buttons_frame.pack(side="left", pady=OFFSET_PLAY_Y, fill="y", expand=0)
+buttons_frame.pack(side="left", pady=OFFSET_PLAY_Y+120, fill="y", expand=0)
 reset_icon = tk.PhotoImage(file = "icons\\reset.png")
 button1 = tk.Button(buttons_frame, bg="#d1e6ed", command=reset, image=reset_icon)
 button1.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
