@@ -7,6 +7,7 @@
 
 import tkinter as tk
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from idlelib.tooltip import Hovertip
 
@@ -102,13 +103,13 @@ class Radar:
             
 def tick_data(plane):
     if(track_plane == 1):
-        # ax.clear()
-        # ax.set_xlim(0,game_canvas.winfo_width())
-        # ax.set_ylim(-game_canvas.winfo_height(), 0)
+        ax.clear()
+        ax.set_xlim(0,game_canvas.winfo_width())
+        ax.set_ylim(-game_canvas.winfo_height(), 0)
         plane_data.append((plane.x, -plane.y))
-        # ax.scatter(*zip(*plane_data))
-        # figure_canvas.draw()
-    window.after(100, tick_data, plane)
+        ax.scatter(*zip(*plane_data))
+        figure_canvas.draw()
+    window.after(30, tick_data, plane)
         
 
 def control(plane):
@@ -127,6 +128,9 @@ def toggle_track_plane():
     global track_plane
     track_plane = track_plane + 1
     if(track_plane == 2):
+        ax.clear()
+        ax.set_xlim(0,game_canvas.winfo_width())
+        ax.set_ylim(-game_canvas.winfo_height(), 0)
         ax.scatter(*zip(*plane_data))
         figure_canvas.draw()
         track_plane = 3
@@ -166,6 +170,8 @@ def update_sizes(plane: Plane):
     plane.gameX=game_canvas.winfo_width()
     ax.set_xlim(0,game_canvas.winfo_width())
     ax.set_ylim(-game_canvas.winfo_height(), 0)
+    ax.set_autoscalex_on(False)
+    ax.set_autoscaley_on(False)
     figure_canvas.draw()
         
 def reset():
@@ -175,7 +181,10 @@ def reset():
     
     track_plane = 0
     plane_data = []
-
+    ax.clear()
+    ax.set_xlim(0,game_canvas.winfo_width())
+    ax.set_ylim(-game_canvas.winfo_height(), 0)
+    figure_canvas.draw()
     red_dot_on = False
     label.config(text="Idle")
     
@@ -268,15 +277,15 @@ game_canvas.pack(side="left", padx=OFFSET_PLAY_X, pady=OFFSET_PLAY_Y, fill="both
 
 buttons_frame = tk.Frame(game_frame, bg="#e6e6e6")
 buttons_frame.pack(side="left", pady=OFFSET_PLAY_Y, fill="y", expand=0)
-reset_icon = tk.PhotoImage(file = "pyPlaneDataGenerator\\icons\\reset.png")
+reset_icon = tk.PhotoImage(file = "icons\\reset.png")
 button1 = tk.Button(buttons_frame, bg="#d1e6ed", command=reset, image=reset_icon)
 button1.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
 button1_tip = Hovertip(button1, "Reset", hover_delay=600)
-trash_icon = tk.PhotoImage(file = "pyPlaneDataGenerator\\icons\\trash.png")
+trash_icon = tk.PhotoImage(file = "icons\\trash.png")
 button2 = tk.Button(buttons_frame, bg="#d1e6ed", command=delete, image=trash_icon)
 button2.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
 button2_tip = Hovertip(button2, "Delete", hover_delay=600)
-radar_icon = tk.PhotoImage(file = "pyPlaneDataGenerator\\icons\\radar.png")
+radar_icon = tk.PhotoImage(file = "icons\\radar.png")
 button3 = tk.Button(buttons_frame, bg="#d1e6ed", command=network_toggle, image=radar_icon)
 button3.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
 button3_tip = Hovertip(button3, "Radar", hover_delay=600)
