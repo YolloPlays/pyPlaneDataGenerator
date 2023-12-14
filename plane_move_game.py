@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from idlelib.tooltip import Hovertip
+from enum import Enum
 
 
 GAME_WIDTH = 1020
@@ -17,8 +18,25 @@ GAME_HEIGHT = 600
 OFFSET_PLAY_X = 10
 OFFSET_PLAY_Y = 10
 
+class GameState(Enum):
+    NOT_STARTED = 0
+    RUNNING = 1
+    STOPPED = 2
+    FINISHED_PLOT = 3
+    @classmethod
+    def toggle(cls, current_state):
+        if current_state == cls.NOT_STARTED:
+            return cls.RUNNING
+        elif current_state == cls.RUNNING:
+            return cls.STOPPED
+        elif current_state == cls.STOPPED:
+            return cls.FINISHED_PLOT
+        elif current_state == cls.FINISHED_PLOT:
+            return cls.NOT_STARTED
+    
+
 # 0 - Not started; 1 - Running; 2 - Stopped; 3 - Finished Plot
-track_plane = 0
+track_plane = GameState.NOT_STARTED
 plane_data = []
 radars = []
 
@@ -102,7 +120,7 @@ class Radar:
          
             
 def tick_data(plane):
-    if(track_plane == 1):
+    if(track_plane == GameState.RUNNING):
         # clear_ax()
         plane_data.append((plane.x, -plane.y))
         # ax.scatter(*zip(*plane_data))
@@ -129,16 +147,16 @@ def clear_ax():
 
 def toggle_track_plane():
     global track_plane
-    track_plane = track_plane + 1
-    if(track_plane == 2):
+    track_plane = GameState.toggle(track_plane)
+    if(track_plane == GameState.STOPPED):
         clear_ax()
         ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
         radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
         ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
         figure_canvas.draw()
-        track_plane = 3
-    elif track_plane == 3:
-        track_plane = 0
+        track_plane = GameState.FINISHED_PLOT
+    elif track_plane == GameState.FINISHED_PLOT:
+        track_plane = GameState.NOT_STARTED
 
 def toggle_red_dot():
     global red_dot_on
@@ -150,20 +168,20 @@ def toggle_red_dot():
         canvas_dot.create_oval(1, 24, 22, 45, fill="red", tags="recording",width=2)
         red_dot_on = True
         
-    if track_plane == 1:   
+    if track_plane == GameState.RUNNING:   
         window.after(700, toggle_red_dot)
-    elif track_plane > 1:
+    elif track_plane == GameState.FINISHED_PLOT:
         canvas_dot.delete("recording")
         red_dot_on = False
       
        
 def change_label():
-    if track_plane == 0:
+    if track_plane == GameState.NOT_STARTED:
         label.config(text="Idle")
-    elif track_plane == 1:
+    elif track_plane == GameState.RUNNING:
         label.config(text="Recording")
         toggle_red_dot()
-    elif track_plane > 2:
+    elif track_plane == GameState.FINISHED_PLOT:
         label.config(text="Finished")
         canvas_dot.delete("recording")  
                 
@@ -182,7 +200,7 @@ def reset():
     global plane_data
     global red_dot_on
     
-    track_plane = 0
+    track_plane = GameState.NOT_STARTED
     plane_data = []
     clear_ax()
     radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
