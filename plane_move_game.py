@@ -11,6 +11,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from idlelib.tooltip import Hovertip
 from enum import Enum
+import datanoise as nn
 
 
 GAME_WIDTH = 1020
@@ -105,9 +106,10 @@ class Plane:
         game_canvas.coords(self.portrait, self.x, self.y, self.x+self.circle_size, self.y+self.circle_size)
         
 class Radar:
-    def __init__(self, x, y, size=16) -> None:
+    def __init__(self, x, y, r, l, size=16) -> None:
         self.x = x
         self.y = y
+        self.data = {"x":x, "y":y, "r":r, "l":l}
         self.size = size
         self.size_off = size/2
         self.portrait = self.draw()
@@ -121,10 +123,7 @@ class Radar:
             
 def tick_data(plane):
     if(track_plane == GameState.RUNNING):
-        # clear_ax()
-        plane_data.append((plane.x, -plane.y))
-        # ax.scatter(*zip(*plane_data))
-        # figure_canvas.draw()
+        nn.update(x=plane.x, y=plane.y)
     window.after(30, tick_data, plane)
         
 
@@ -148,11 +147,9 @@ def clear_ax():
 def toggle_track_plane():
     global track_plane
     track_plane = GameState.toggle(track_plane)
-    if(track_plane == GameState.STOPPED):
-        clear_ax()
-        ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
-        radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-        ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+    if track_plane == GameState.RUNNING:
+        nn.reset(x=plane.x, y=plane.y, radars=radars, figure=fig, ax=ax)
+    elif track_plane == GameState.STOPPED:
         figure_canvas.draw()
         track_plane = GameState.FINISHED_PLOT
     elif track_plane == GameState.FINISHED_PLOT:
@@ -240,21 +237,13 @@ def mouse_press(event: tk.Event):
     if event.widget == game_canvas:
         if button3.config('relief')[-1] == 'sunken':
             if not on_radar(radars, event.x, event.y):
-                radar = Radar(event.x, event.y)
-                radars.append(radar)
-                clear_ax()
-                radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-                ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
-                ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+                radar = Radar(event.x, event.y, r=0, l=0)
+                radars.append(radar.data)
                 figure_canvas.draw()
         else:
             if r:= on_radar(radars, event.x, event.y):
                 radars.remove(r)
                 r.undraw()
-                clear_ax()
-                radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-                ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
-                ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
                 figure_canvas.draw()
                 
         
