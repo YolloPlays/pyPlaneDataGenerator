@@ -41,6 +41,7 @@ plane_data = []
 radars = []
 
 red_dot_on = False
+block_root = False
 
 class Plane:
     def __init__(self, gamecvs: tk.Canvas, x=100, y=100, acceleration=0.8, start_velocity_x=0, start_velovity_y=0, friction=0.99, max_acceleration=12, circle_size=30) -> None:
@@ -105,9 +106,12 @@ class Plane:
         game_canvas.coords(self.portrait, self.x, self.y, self.x+self.circle_size, self.y+self.circle_size)
         
 class Radar:
-    def __init__(self, x, y, size=16) -> None:
+    def __init__(self, x, y, long=1, lat=1, rotation=0, size=16) -> None:
         self.x = x
         self.y = y
+        self.long = long
+        self.lat = lat
+        self.rotation = rotation
         self.size = size
         self.size_off = size/2
         self.portrait = self.draw()
@@ -140,20 +144,20 @@ def _quit():
     window.destroy()  # this is necessary on Windows to prevent
     # Fatal Python Error: PyEval_RestoreThread: NULL tstate
     
-def clear_ax():
-    ax.clear()
-    ax.set_xlim(0,game_canvas.winfo_width())
-    ax.set_ylim(-game_canvas.winfo_height(), 0)
+# def clear_ax():
+#     ax.clear()
+#     ax.set_xlim(0,game_canvas.winfo_width())
+#     ax.set_ylim(-game_canvas.winfo_height(), 0)
 
 def toggle_track_plane():
     global track_plane
     track_plane = GameState.toggle(track_plane)
     if(track_plane == GameState.STOPPED):
-        clear_ax()
-        ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
-        radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-        ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
-        figure_canvas.draw()
+        # clear_ax()
+        # ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+        # radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+        # ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+        # figure_canvas.draw()
         track_plane = GameState.FINISHED_PLOT
     elif track_plane == GameState.FINISHED_PLOT:
         track_plane = GameState.NOT_STARTED
@@ -189,11 +193,11 @@ def update_sizes(plane: Plane):
     window.update()
     plane.gameY=game_canvas.winfo_height()
     plane.gameX=game_canvas.winfo_width()
-    ax.set_xlim(0,game_canvas.winfo_width())
-    ax.set_ylim(-game_canvas.winfo_height(), 0)
-    ax.set_autoscalex_on(False)
-    ax.set_autoscaley_on(False)
-    figure_canvas.draw()
+    # ax.set_xlim(0,game_canvas.winfo_width())
+    # ax.set_ylim(-game_canvas.winfo_height(), 0)
+    # ax.set_autoscalex_on(False)
+    # ax.set_autoscaley_on(False)
+    # figure_canvas.draw()
         
 def reset():
     global track_plane
@@ -202,20 +206,20 @@ def reset():
     
     track_plane = GameState.NOT_STARTED
     plane_data = []
-    clear_ax()
-    radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-    ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
-    figure_canvas.draw()
+    # clear_ax()
+    # radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+    # ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+    # figure_canvas.draw()
     red_dot_on = False
     label.config(text="Idle")
     
 def delete():
     global radars
     reset()
-    clear_ax()
+    # clear_ax()
     game_canvas.delete("radar")
     radars = []
-    figure_canvas.draw()
+    # figure_canvas.draw()
     
 def network_toggle():
     if button3.config('relief')[-1] == 'sunken':
@@ -236,26 +240,55 @@ def is_in_between(a,b,c):
     
 
 def mouse_press(event: tk.Event):
-    global radars
+    global radars, block_root
+    if block_root:
+        return
     if event.widget == game_canvas:
         if button3.config('relief')[-1] == 'sunken':
             if not on_radar(radars, event.x, event.y):
                 radar = Radar(event.x, event.y)
                 radars.append(radar)
-                clear_ax()
-                radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-                ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
-                ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
-                figure_canvas.draw()
+                # clear_ax()
+                # radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+                # ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+                # ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+                # figure_canvas.draw()
         else:
             if r:= on_radar(radars, event.x, event.y):
-                radars.remove(r)
-                r.undraw()
-                clear_ax()
-                radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
-                ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
-                ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
-                figure_canvas.draw()
+                block_root = True
+                def unblock_root():
+                    global block_root
+                    block_root = False
+                def handle_scale(event):
+                    r.rotation = rot.get()
+                    r.lat = lat.get()
+                    r.long = long.get()
+                def debug(fuckoff):
+                    print(r.lat, r.long, r.rotation)
+                pop_up = tk.Toplevel(window)
+                pop_up.resizable(False, False)
+                pop_up.title("Radar")
+                pop_up.geometry("300x300+1200+250")
+                pop_up.protocol("WM_DELETE_WINDOW", lambda : (unblock_root(), pop_up.destroy(), print(block_root)))
+                pop_up.bind("<i>", debug)
+                lat = tk.IntVar(value=r.lat)
+                long = tk.IntVar(value=r.long)
+                rot = tk.IntVar(value=r.rotation)
+                sl_lat = tk.Scale(pop_up, from_=0, to=100, orient="horizontal", variable=lat, command=handle_scale)
+                sl_long = tk.Scale(pop_up, from_=0, to=100, orient="horizontal", variable=long, command=handle_scale)
+                sl_rot = tk.Scale(pop_up, from_=0, to=100, orient="horizontal", variable=rot, command=handle_scale)
+                btn_del = tk.Button(pop_up, text="Delete", command=lambda: (radars.remove(r), r.undraw(), pop_up.destroy(), unblock_root()))
+                sl_lat.pack(expand=True)
+                sl_long.pack(expand=True)
+                sl_rot.pack(expand=True)
+                btn_del.pack(expand=True)
+                # radars.remove(r)
+                # r.undraw()
+                # clear_ax()
+                # radar_tuple = list(map(lambda rad: (rad.x, -rad.y), radars))
+                # ax.scatter(*zip(*radar_tuple), c='r') if len(radar_tuple)>0 else None
+                # ax.scatter(*zip(*plane_data)) if len(plane_data)>0 else None
+                # figure_canvas.draw()
                 
         
 
@@ -313,10 +346,10 @@ button3 = tk.Button(buttons_frame, bg="#d1e6ed", command=network_toggle, image=r
 button3.pack(side="top", pady=40, padx=OFFSET_PLAY_X)
 button3_tip = Hovertip(button3, "Radar", hover_delay=600)
 
-fig, ax = plt.subplots()
-figure_canvas = FigureCanvasTkAgg(fig, game_frame)
+# fig, ax = plt.subplots()
+# figure_canvas = FigureCanvasTkAgg(fig, game_frame)
 # figure_canvas.draw()
-figure_canvas.get_tk_widget().pack(side="left", fill="both", expand=1, padx=OFFSET_PLAY_X, pady=OFFSET_PLAY_Y)
+# figure_canvas.get_tk_widget().pack(side="left", fill="both", expand=1, padx=OFFSET_PLAY_X, pady=OFFSET_PLAY_Y)
 
 # Globale Variable zur Verfolgung der derzeit gedrückten Tasten
 currently_pressed = set()
